@@ -46,11 +46,13 @@ print("r2: %f" % trainingSummary.r2)
 
 '''
 import datetime
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, dataframe
 import socket
 import boto3
 
+
 def big_list(number):
+    # not used for now
     import random
     import string
     le_big_list = []
@@ -60,7 +62,6 @@ def big_list(number):
 
 spark = SparkSession.builder.appName('test-paralel').getOrCreate()
 sc = spark.sparkContext
-
 rdd = sc.parallelize(big_list(1000))
 words = sc.parallelize([
     ('a', 'abracadabra'),
@@ -91,12 +92,13 @@ words = sc.parallelize([
     ('z', 'zebra')
 ])
 # rddCollect = rdd.collect()
-rdd.write.mode("overwrite").csv("data/{hostname}.csv".format(hostname=socket.gethostname()))
-print("{time} uploading file to s3".format(time=datetime.datetime.now(), hostname=socket.gethostname()))
-client = boto3.client('emr', region_name='us-west-1')
+dataframe = words.toDF()
 S3_BUCKET = "franco-root"
-S3_KEY = "{hostname}.csv".format(hostname=socket.gethostname())
-S3_URI = 's3://{bucket}/{key}'.format(bucket=S3_BUCKET, key=S3_KEY)
+# This will be the masters hostname
+S3_KEY = "{hostname}".format(hostname=socket.gethostname())
+dataframe.append(('hostname', "{hostname}".format(hostname=socket.gethostname())))
+dataframe.write.mode("overwrite").csv('s3://{bucket}/{key}'.format(bucket=S3_BUCKET, key=S3_KEY))
+
 
 print("{time} finished processing for node {hostname}".format(time=datetime.datetime.now(), hostname=socket.gethostname()))
 
