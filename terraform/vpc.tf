@@ -7,7 +7,7 @@ module "tamr_vpc" {
     load_balancing_subnets_cidr_blocks = ["10.0.4.0/24", "10.0.5.0/24"]
     public_subnets_cidr_blocks = ["10.0.6.0/24", "10.0.7.0/24"]
     ingress_cidr_blocks   = ["0.0.0.0/0"]
-    availability_zones    = ["us-west-1a","us-west-1b"]
+    availability_zones    = var.azs
     create_public_subnets = true
     enable_nat_gateway    = true
     create_load_balancing_subnets = true
