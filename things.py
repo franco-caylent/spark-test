@@ -1,41 +1,105 @@
+'''
+from pyspark.ml.regression import LinearRegression
+
+# Load training data
+from pyspark.shell import spark
+
+#training = spark.read.format("csv")\
+#    .load("s3://franco-root/FINAL_USO.csv")
+training = spark.read.format("libsvm")\
+    .load("s3://franco-root/sample_data.txt")
+lr = LinearRegression(maxIter=10, regParam=0.3, elasticNetParam=0.8)
+
+# Fit the model
+lrModel = lr.fit(training)
+
+# Print the coefficients and intercept for linear regression
+print("Coefficients: %s" % str(lrModel.coefficients))
+print("Intercept: %s" % str(lrModel.intercept))
+
+# Summarize the model over the training set and print out some metrics
+trainingSummary = lrModel.summary
+print("numIterations: %d" % trainingSummary.totalIterations)
+print("objectiveHistory: %s" % str(trainingSummary.objectiveHistory))
+trainingSummary.residuals.show()
+print("RMSE: %f" % trainingSummary.rootMeanSquaredError)
+print("r2: %f" % trainingSummary.r2)
+
+# More iterations
+
+lr = LinearRegression(maxIter=1000000, regParam=0.3, elasticNetParam=0.8)
+
+# Fit the model
+lrModel = lr.fit(training)
+
+# Print the coefficients and intercept for linear regression
+print("Coefficients: %s" % str(lrModel.coefficients))
+print("Intercept: %s" % str(lrModel.intercept))
+
+# Summarize the model over the training set and print out some metrics
+trainingSummary = lrModel.summary
+print("numIterations: %d" % trainingSummary.totalIterations)
+print("objectiveHistory: %s" % str(trainingSummary.objectiveHistory))
+trainingSummary.residuals.show()
+print("RMSE: %f" % trainingSummary.rootMeanSquaredError)
+print("r2: %f" % trainingSummary.r2)
+
+'''
+import datetime
 from pyspark.sql import SparkSession
-def le_pi():
-    # Introduces memory errors on m1.large
-    k = 1
-    s = 0
-    how_many = 100000
-    for i in range(how_many):
-        #if i % 100000000 == 0:
-        #    print("{}/{} iterations".format(i, how_many))
-        if i % 2 == 0:
-            s += 4 / k
-        else:
-            s -= 4 / k
-        k += 2
-    print(s)
+import socket
+import boto3
 
-def big_file():
-    #import boto3
-    #s3 = boto3.resource('s3')
-    #s3.download_file('franco-test-emr-data', 'FINAL_USO.csv', 'FINAL_USO.csv')
-    big_text = ""
-    size_in_mb = 1024
-    with open('s3://franco-test-emr-data/FINAL_USO.csv') as file:
-        for i in range(1, size_in_mb):
-            big_text = big_text + file.read()
-        with open('bigfile.csv') as bigfile:
-            bigfile.write(big_text)
+def big_list(number):
+    import random
+    import string
+    le_big_list = []
+    for le_num in range(0, number):
+        le_big_list.append((le_num, random.choice(string.ascii_letters)))
+    return le_big_list
 
+spark = SparkSession.builder.appName('test-paralel').getOrCreate()
+sc = spark.sparkContext
 
-spark = SparkSession.builder \
-    .master("local[*]") \
-    .appName("spark_test") \
-    .getOrCreate()
-#big_file()
-input_file = "bigfile.csv"
-for i in range(1, 1000):
-    df = spark.read.csv("s3://franco-test-emr-data/files/*.csv")
-    print(df.count(), len(df.columns))
-df = spark.read.csv(input_file)
+rdd = sc.parallelize(big_list(1000))
+words = sc.parallelize([
+    ('a', 'abracadabra'),
+    ('b', 'ball'),
+    ('c', 'cousin'),
+    ('d', 'data'),
+    ('e', 'ernest'),
+    ('f', 'failure'),
+    ('g', 'grill'),
+    ('h', 'hills'),
+    ('i', 'inventor'),
+    ('j', 'jay'),
+    ('k', 'kale'),
+    ('l', 'lumberjack'),
+    ('m', 'minas tirith'),
+    ('n', 'name'),
+    ('o', 'orthopedic'),
+    ('p', 'poland'),
+    ('q', 'quebec'),
+    ('r', 'raisin'),
+    ('s', 'stain'),
+    ('t', 'trouble'),
+    ('u', 'university'),
+    ('v', 'violon'),
+    ('w', 'wazausky'),
+    ('x', 'xavier'),
+    ('y', 'yall'),
+    ('z', 'zebra')
+])
+# rddCollect = rdd.collect()
+rdd.write.mode("overwrite").csv("data/{hostname}.csv".format(hostname=socket.gethostname()))
+print("{time} uploading file to s3".format(time=datetime.datetime.now(), hostname=socket.gethostname()))
+client = boto3.client('emr', region_name='us-west-1')
+S3_BUCKET = "franco-root"
+S3_KEY = "{hostname}.csv".format(hostname=socket.gethostname())
+S3_URI = 's3://{bucket}/{key}'.format(bucket=S3_BUCKET, key=S3_KEY)
 
-# le_pi()
+print("{time} finished processing for node {hostname}".format(time=datetime.datetime.now(), hostname=socket.gethostname()))
+
+# VERY important to stop SparkSession
+# Otherwise, the job will keep running indefinitely
+spark.stop()

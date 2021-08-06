@@ -2,7 +2,7 @@ import boto3
 
 # See https://stackoverflow.com/questions/36706512/how-do-you-automate-pyspark-jobs-on-emr-using-boto3-or-otherwise
 client = boto3.client('emr', region_name='us-west-1')
-S3_BUCKET = 'franco-test-emr-data'
+S3_BUCKET = 'franco-root'
 S3_KEY = 'things.py'
 S3_URI = 's3://{bucket}/{key}'.format(bucket=S3_BUCKET, key=S3_KEY)
 
