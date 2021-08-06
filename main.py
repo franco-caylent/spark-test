@@ -17,14 +17,15 @@ response = client.list_clusters(ClusterStates=[
     'STARTING', 'BOOTSTRAPPING', 'RUNNING', 'WAITING'
 ])
 print("The following are your clusters")
-for cluster in response['Clusters']:
-    print(cluster['Id'])
+for position in range(0, len(response['Clusters'])):
+    print("{}) {}  {}".format(position, response['Clusters'][position]['Id'], response['Clusters'][position]['Name']))
+selected_cluster = input("Select what cluster to use using the number\n")
 # JOBFLOWID is clusterid
 
 # Add steps
 print("Adding steps")
 step_response = client.add_job_flow_steps(
-    JobFlowId=response['Clusters'][0]['Id'], Steps=[
+    JobFlowId=response['Clusters'][int(selected_cluster)]['Id'], Steps=[
         {
             'Name': 'Copy Python Script',
             'ActionOnFailure': 'CANCEL_AND_WAIT',
